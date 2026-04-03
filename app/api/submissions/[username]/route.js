@@ -7,8 +7,10 @@ async function fetchLeetcode(query, variables) {
     headers: {
       'Content-Type': 'application/json',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      'Referer': 'https://leetcode.com',
     },
     body,
+    cache: 'no-store',
   })
   if (!res.ok) throw new Error(`LeetCode API HTTP ${res.status}`)
   return res.json()
@@ -16,7 +18,7 @@ async function fetchLeetcode(query, variables) {
 
 export async function GET(request, { params }) {
   const username = params.username
-  const limit = 20
+  const limit = 50
   try {
     const query = `
       query recentSubmissionList($username: String!, $limit: Int!) {

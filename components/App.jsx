@@ -7,7 +7,7 @@ import RevisionTracker from './RevisionTracker'
 import Profile from './Profile'
 import Settings from './Settings'
 import ToastContainer, { useToast, showToast } from './Toast'
-import { useAppState, makeProblem, migrateData } from '../hooks/useAppState'
+import { useAppState, makeProblem, advanceRevision, migrateData } from '../hooks/useAppState'
 import SplashScreen from './SplashScreen'
 import LinkingWizard from './LinkingWizard'
 import { supabase } from '../lib/supabaseClient'
@@ -247,29 +247,40 @@ export default function App() {
       if (profileData.status === 'success') {
         if (profileData.totalSolved) {
           setTotalSolved(profileData.totalSolved)
-          ls.set('algonex_manual_solved', String(profileData.totalSolved))
         }
         if (profileData.profileMeta) setProfileMeta(profileData.profileMeta)
       }
 
-      // Submissions
+      // Submissions — batch-collect, then apply in one state update
       const subData = await subRes.json()
       if (subData.status === 'success' && Array.isArray(subData.submission)) {
         let added = 0, revised = 0
-        subData.submission.forEach(sub => {
-          const subDate = new Date(parseInt(sub.timestamp) * 1000)
-          const existing = problems.find(p => p.titleSlug === sub.titleSlug)
-          if (!existing) {
-            addProblem(sub.title, sub.titleSlug, subDate)
-            added++
-          } else {
-            const lastMs = new Date(existing.solvedAt).getTime()
-            if (subDate.getTime() > lastMs + 3600000) {
-              solveRevision(existing.id, subDate)
-              revised++
+
+        setProblems(currentProblems => {
+          const updated = [...currentProblems]
+
+          subData.submission.forEach(sub => {
+            const subDate = new Date(parseInt(sub.timestamp) * 1000)
+            const existingIdx = updated.findIndex(p => p.titleSlug === sub.titleSlug)
+
+            if (existingIdx === -1) {
+              // New problem — add it
+              updated.push(makeProblem(sub.title, sub.titleSlug, subDate, 'medium', intervals))
+              added++
+            } else {
+              // Existing problem — check if this is a new revision
+              const existing = updated[existingIdx]
+              const lastMs = new Date(existing.solvedAt).getTime()
+              if (subDate.getTime() > lastMs + 3600000) {
+                updated[existingIdx] = advanceRevision(existing, subDate, intervals)
+                revised++
+              }
             }
-          }
+          })
+
+          return updated
         })
+
         addToast(`Sync done: +${added} new, ${revised} revised.`, 'success')
       } else {
         addToast('Could not fetch submissions.', 'warning')
@@ -277,7 +288,6 @@ export default function App() {
 
       const now = new Date().toISOString()
       setLastSync(now)
-      ls.set('algonex_last_sync', now)
       calculateDailyPlan(true)
     } catch (e) {
       console.error(e)
@@ -285,7 +295,7 @@ export default function App() {
     } finally {
       setSyncing(false)
     }
-  }, [username, problems, addProblem, solveRevision, setTotalSolved, setProfileMeta,
+  }, [leetcodeUsername, isLinked, intervals, setProblems, setTotalSolved, setProfileMeta,
       setLastSync, calculateDailyPlan, addToast])
 
   const handleAddProblem = useCallback((title, slug, date, difficulty) => {

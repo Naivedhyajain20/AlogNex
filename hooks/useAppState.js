@@ -196,10 +196,19 @@ export function useAppState(activeUser, userId) {
         lastSync, leetcodeUsername, isLinked
       }
 
-      // Update local storage too for availability
+      // Update local storage for offline availability
       const s = `_${activeUser}`
       LS.set(`algonex_problems${s}`, problems)
       LS.set(`algonex_activities${s}`, activities)
+      LS.set(`algonex_custom_intervals${s}`, intervals)
+      LS.setRaw(`algonex_daily_quota${s}`, String(dailyQuota))
+      LS.set(`algonex_daily_pool${s}`, dailyPool)
+      LS.setRaw(`algonex_daily_date${s}`, dailyDate || '')
+      LS.setRaw(`algonex_manual_solved${s}`, String(totalSolved))
+      LS.set(`algonex_profile_meta${s}`, profileMeta)
+      LS.setRaw(`algonex_last_sync${s}`, lastSync || '')
+      LS.setRaw(`algonex_leetcode_id${s}`, leetcodeUsername)
+      LS.setRaw(`algonex_is_linked${s}`, String(isLinked))
 
       // Upload to cloud
       if (!supabase) return
@@ -216,7 +225,9 @@ export function useAppState(activeUser, userId) {
     }, 2000)
 
     return () => clearTimeout(saveTimeout.current)
-  }, [problems, activities, profileMeta, leetcodeUsername, isLinked, dailyQuota, ready, userId, activeUser])
+  }, [problems, activities, intervals, profileMeta, leetcodeUsername, isLinked, 
+      dailyQuota, dailyPool, dailyDate, totalSolved, lastSync, 
+      ready, userId, activeUser])
 
   const logActivity = useCallback((action, details, type = 'info') => {
     const entry = { id: Date.now(), action, details, type, timestamp: new Date().toISOString() }
