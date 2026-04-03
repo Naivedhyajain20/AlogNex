@@ -47,7 +47,7 @@ export async function GET(request, { params }) {
       const stats = userObj.submitStats.acSubmissionNum
       const allDiff = stats.find(d => d.difficulty === 'All')
       if (allDiff) totalSolved = allDiff.count
-      
+
       // Per-difficulty breakdown
       const easy = stats.find(d => d.difficulty === 'Easy')
       const medium = stats.find(d => d.difficulty === 'Medium')
@@ -57,7 +57,7 @@ export async function GET(request, { params }) {
         medium: medium?.count || 0,
         hard: hard?.count || 0,
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return NextResponse.json({ status: 'success', totalSolved, profileMeta, difficultyBreakdown })
   } catch (e) {
