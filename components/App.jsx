@@ -199,7 +199,7 @@ export default function App() {
 
   // ── App state (problems, activities, etc.) ──
   const {
-    ready, problems, activities,
+    ready, problems, setProblems, activities,
     intervals, setIntervals,
     dailyQuota, setDailyQuota,
     dailyPool, calculateDailyPlan,
