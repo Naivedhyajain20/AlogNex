@@ -1,6 +1,9 @@
 'use client'
 
-export default function Sidebar({ view, setView, username, lastSync, onSync, onLogout, syncing, theme, toggleTheme }) {
+export default function Sidebar({ 
+  view, setView, username, lastSync, onSync, onLogout, 
+  syncing, theme, toggleTheme, isOpen, setIsOpen 
+}) {
   const syncLabel = lastSync
     ? `Last synced: ${new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
     : 'Last synced: Never'
@@ -25,7 +28,13 @@ export default function Sidebar({ view, setView, username, lastSync, onSync, onL
   ]
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' open' : ''}`}>
+      <button className="sidebar-close" onClick={() => setIsOpen(false)}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
       <div className="sidebar-header">
         <div className="logo" style={{ fontFamily: 'var(--font-logo)', fontWeight: 800, letterSpacing: '-0.02em', fontSize: '1.4rem' }}>
           <img src="/logo.png" alt="ALGONEX" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />

@@ -57,18 +57,7 @@ export default function Dashboard({
 
       {/* Premium Link to LeetCode Hero Section */}
       {!isLinked && (
-        <div className="link-hero-card" style={{
-          marginBottom: '2.5rem', 
-          padding: '4rem 2rem', 
-          textAlign: 'center',
-          background: 'linear-gradient(135deg, rgba(255,161,22,0.12) 0%, rgba(0,0,0,0.6) 100%)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,161,22,0.2)',
-          borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 0 40px rgba(255,161,22,0.05)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
+        <div className="link-hero-card">
           {/* Subtle Glow Effect */}
           <div style={{
             position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%',
@@ -90,30 +79,17 @@ export default function Dashboard({
               Get Started
             </div>
 
-            <h2 style={{ 
-              fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', 
-              background: 'linear-gradient(to right, #fff, var(--primary))',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-            }}>
-              Your Coding Journey, Multiplied.
-            </h2>
+            <h2>Your Coding Journey, Multiplied.</h2>
             
-            <p style={{ 
-              color: 'var(--text-muted)', marginBottom: '3rem', fontSize: '1.2rem', 
-              maxWidth: '700px', margin: '0 auto 3rem', lineHeight: '1.6' 
-            }}>
+            <p>
               Connect your LeetCode profile to unlock AI-powered insights, automated revision scheduling, 
               and a personalized dashboard that grows with your skills.
             </p>
 
             <button 
               className="btn btn-primary" 
-              style={{ 
-                fontSize: '1.25rem', padding: '1.2rem 3.5rem', borderRadius: '12px', 
-                boxShadow: '0 10px 30px rgba(255,161,22,0.3)', fontWeight: '800',
-                transition: 'all 0.3s ease', textTransform: 'uppercase', letterSpacing: '0.05em'
-              }} 
               onClick={onStartLink}
+              id="link-leetcode-btn"
             >
               Link to LeetCode
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '0.75rem' }}>
@@ -138,6 +114,7 @@ export default function Dashboard({
           </div>
         </div>
       )}
+
 
       {/* History Import - Show only if no problems are tracked */}
       {problems.length === 0 && (

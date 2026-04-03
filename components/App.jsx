@@ -28,6 +28,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [showSplash, setShowSplash] = useState(false)
   const [showLinkWizard, setShowLinkWizard] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [theme, setTheme] = useState('dark')
 
   // Theme effect
@@ -74,6 +75,7 @@ export default function App() {
   const handleSetView = useCallback((v) => {
     setView(v)
     ls.set('algonex_current_view', v)
+    setIsSidebarOpen(false) // Close sidebar on mobile after navigation
   }, [])
 
   const handleLogin = useCallback(async (user, email, pass, isSignUp) => {
@@ -383,6 +385,14 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {isSidebarOpen && (
+        <div 
+          className="modal-overlay" 
+          style={{ zIndex: 99, background: 'rgba(0,0,0,0.4)' }} 
+          onClick={() => setIsSidebarOpen(false)} 
+        />
+      )}
+
       <Sidebar
         view={view}
         setView={handleSetView}
@@ -393,11 +403,19 @@ export default function App() {
         syncing={syncing}
         theme={theme}
         toggleTheme={toggleTheme}
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
       />
 
       <main className="content">
         {/* Top bar */}
         <header className="top-bar">
+          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+
           <div className="actions">
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               {lastSync
