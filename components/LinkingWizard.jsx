@@ -10,6 +10,10 @@ export default function LinkingWizard({ onLink }) {
   const [loading, setLoading] = useState(false)
 
   const validateUniqueness = async (targetId) => {
+    if (!supabase) {
+      setError('Supabase connection not established. Check environment variables.')
+      return false
+    }
     const { data, error } = await supabase
       .from('profiles')
       .select('algonex_id')

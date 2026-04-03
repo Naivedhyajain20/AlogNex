@@ -140,6 +140,11 @@ export function useAppState(activeUser, userId) {
       }
 
       // 2. Fetch from Supabase
+      if (!supabase) {
+        setReady(true)
+        return
+      }
+
       const { data, error } = await supabase
         .from('app_data')
         .select('app_state')
@@ -197,6 +202,8 @@ export function useAppState(activeUser, userId) {
       LS.set(`algonex_activities${s}`, activities)
 
       // Upload to cloud
+      if (!supabase) return
+
       const { error } = await supabase
         .from('app_data')
         .upsert({ 

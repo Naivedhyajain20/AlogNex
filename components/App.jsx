@@ -48,6 +48,10 @@ export default function App() {
   useEffect(() => {
     migrateData()
     const checkSession = async () => {
+      if (!supabase) {
+        setAuthReady(true)
+        return
+      }
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         const { data: profile } = await supabase.from('profiles').select('algonex_id').eq('id', session.user.id).single()
@@ -73,6 +77,11 @@ export default function App() {
   }, [])
 
   const handleLogin = useCallback(async (user, email, pass, isSignUp) => {
+    if (!supabase) {
+      addToast('Deployment Error: Supabase URL/Key is missing in Vercel. Please check README.', 'error')
+      return
+    }
+
     if (isSignUp) {
       // 1. Sign Up (including metadata for our database trigger)
       const { data, error } = await supabase.auth.signUp({ 
@@ -167,7 +176,7 @@ export default function App() {
   }, [addToast])
 
   const handleLogout = useCallback(async () => {
-    await supabase.auth.signOut()
+    if (supabase) await supabase.auth.signOut()
     setAuthed(false)
     setUsername('')
     setUserId(null)
@@ -175,6 +184,7 @@ export default function App() {
 
   const handleChangePassword = useCallback(async (current, next, confirm) => {
     if (next !== confirm) { addToast('Passwords do not match.', 'error'); return }
+    if (!supabase) { addToast('Supabase Client not initialized.', 'error'); return }
 
     const { error } = await supabase.auth.updateUser({ password: next })
     
@@ -310,6 +320,7 @@ export default function App() {
   }, [setDailyQuota])
 
   const handleUpdateProfile = useCallback(async (newAlgonexId, newLeetcodeId) => {
+    if (!supabase) { addToast('Supabase Client not initialized.', 'error'); return }
     const { error } = await supabase
       .from('profiles')
       .update({ algonex_id: newAlgonexId, leetcode_id: newLeetcodeId })
