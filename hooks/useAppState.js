@@ -63,8 +63,9 @@ export function migrateData() {
 }
 
 // ──────────── Problem Utilities ────────────
-export function makeProblem(title, titleSlug, solvedDate, difficulty = 'medium', intervals = [1,3,7,14,30,90,180]) {
-  const intervalDays = intervals[2] ?? 7
+export function makeProblem(title, titleSlug, solvedDate, difficulty = 'medium', intervals = [1]) {
+  const intervalDays = intervals[0] || 1
+  const isoDate = solvedDate instanceof Date ? solvedDate.toISOString() : solvedDate
   const nextRevision = new Date(solvedDate)
   nextRevision.setDate(nextRevision.getDate() + intervalDays)
   return {
@@ -73,22 +74,24 @@ export function makeProblem(title, titleSlug, solvedDate, difficulty = 'medium',
     titleSlug,
     url: `https://leetcode.com/problems/${titleSlug}/`,
     difficulty: difficulty || 'medium',
-    solvedAt: solvedDate instanceof Date ? solvedDate.toISOString() : solvedDate,
+    topic: 'General',
+    firstSolvedAt: isoDate,
+    solvedAt: isoDate,
     nextRevisionAt: nextRevision.toISOString(),
-    intervalIndex: 2,
+    intervalIndex: 0,
     status: 'upcoming',
   }
 }
 
-export function advanceRevision(problem, solvedDate = new Date(), intervals = [1,3,7,14,30,90,180]) {
-  const nextIdx = Math.min(problem.intervalIndex + 1, intervals.length - 1)
-  const nextDays = intervals[nextIdx]
+export function advanceRevision(problem, solvedDate = new Date(), intervals = [1]) {
+  const nextDays = intervals[0] || 1
+  const isoDate = solvedDate instanceof Date ? solvedDate.toISOString() : solvedDate
   const nextRevision = new Date(solvedDate)
   nextRevision.setDate(nextRevision.getDate() + nextDays)
   return {
     ...problem,
-    intervalIndex: nextIdx,
-    solvedAt: solvedDate instanceof Date ? solvedDate.toISOString() : solvedDate,
+    intervalIndex: 0,
+    solvedAt: isoDate,
     nextRevisionAt: nextRevision.toISOString(),
   }
 }
@@ -103,8 +106,9 @@ export function useAppState(activeUser, userId) {
   const [ready, setReady] = useState(false)
   const [problems, setProblems]     = useState([])
   const [activities, setActivities] = useState([])
-  const [intervals, setIntervals]   = useState([1,3,7,14,30,90,180])
+  const [intervals, setIntervals]   = useState([1])
   const [dailyQuota, setDailyQuota] = useState(5)
+  const [isRollOverEnabled, setIsRollOverEnabled] = useState(true)
   const [dailyPool, setDailyPool]   = useState([])
   const [dailyDate, setDailyDate]   = useState(null)
   const [totalSolved, setTotalSolved]   = useState(0)
@@ -112,6 +116,7 @@ export function useAppState(activeUser, userId) {
   const [lastSync, setLastSync]         = useState(null)
   const [leetcodeUsername, setLeetcodeUsername] = useState('')
   const [isLinked, setIsLinked] = useState(false)
+  const [onboardedAt, setOnboardedAt] = useState(null)
 
   const saveTimeout = useRef(null)
 
@@ -128,7 +133,7 @@ export function useAppState(activeUser, userId) {
       const localState = {
         problems: LS.get(`algonex_problems${s}`, []),
         activities: LS.get(`algonex_activities${s}`, []),
-        intervals: LS.get(`algonex_custom_intervals${s}`, [1,3,7,14,30,90,180]),
+        intervals: LS.get(`algonex_custom_intervals${s}`, [1]),
         dailyQuota: Number(LS.getRaw(`algonex_daily_quota${s}`, '5')),
         dailyPool: LS.get(`algonex_daily_pool${s}`, []),
         dailyDate: LS.getRaw(`algonex_daily_date${s}`, null),
@@ -136,7 +141,9 @@ export function useAppState(activeUser, userId) {
         profileMeta: LS.get(`algonex_profile_meta${s}`, null),
         lastSync: LS.getRaw(`algonex_last_sync${s}`, null),
         leetcodeUsername: LS.getRaw(`algonex_leetcode_id${s}`, ''),
-        isLinked: LS.getRaw(`algonex_is_linked${s}`, 'false') === 'true'
+        isLinked: LS.getRaw(`algonex_is_linked${s}`, 'false') === 'true',
+        isRollOverEnabled: LS.get(`algonex_rollover${s}`, true),
+        onboardedAt: LS.getRaw(`algonex_onboarded_at${s}`, null)
       }
 
       // 2. Fetch from Supabase
@@ -162,7 +169,7 @@ export function useAppState(activeUser, userId) {
 
       setProblems(final.problems || [])
       setActivities(final.activities || [])
-      setIntervals(final.intervals || [1,3,7,14,30,90,180])
+      setIntervals(final.intervals || [1])
       setDailyQuota(final.dailyQuota || 5)
       setDailyPool(final.dailyPool || [])
       setDailyDate(final.dailyDate)
@@ -171,6 +178,16 @@ export function useAppState(activeUser, userId) {
       setLastSync(final.lastSync)
       setLeetcodeUsername(final.leetcodeUsername || '')
       setIsLinked(final.isLinked || false)
+      setIsRollOverEnabled(final.isRollOverEnabled ?? true)
+
+      if (final.onboardedAt) {
+        setOnboardedAt(final.onboardedAt)
+      } else {
+        const joined = new Date().toISOString()
+        setOnboardedAt(joined)
+        LS.setRaw(`algonex_onboarded_at${s}`, joined)
+      }
+
       setReady(true)
 
       // 4. Update local cache with what we got from cloud
@@ -183,6 +200,13 @@ export function useAppState(activeUser, userId) {
     loadData()
   }, [activeUser, userId])
 
+  // Persist roll-over setting to local storage immediately
+  useEffect(() => {
+    if (ready && activeUser) {
+      LS.set(`algonex_rollover_${activeUser}`, isRollOverEnabled)
+    }
+  }, [isRollOverEnabled, ready, activeUser])
+
   // persist to Supabase (debounced)
   useEffect(() => {
     if (!ready || !userId) return
@@ -193,7 +217,8 @@ export function useAppState(activeUser, userId) {
       const stateToSave = {
         problems, activities, intervals, dailyQuota,
         dailyPool, dailyDate, totalSolved, profileMeta,
-        lastSync, leetcodeUsername, isLinked
+        lastSync, leetcodeUsername, isLinked,
+        isRollOverEnabled, onboardedAt
       }
 
       // Update local storage for offline availability
@@ -209,6 +234,8 @@ export function useAppState(activeUser, userId) {
       LS.setRaw(`algonex_last_sync${s}`, lastSync || '')
       LS.setRaw(`algonex_leetcode_id${s}`, leetcodeUsername)
       LS.setRaw(`algonex_is_linked${s}`, String(isLinked))
+      LS.set(`algonex_rollover${s}`, isRollOverEnabled)
+      LS.setRaw(`algonex_onboarded_at${s}`, onboardedAt || '')
 
       // Upload to cloud
       if (!supabase) return
@@ -226,18 +253,20 @@ export function useAppState(activeUser, userId) {
 
     return () => clearTimeout(saveTimeout.current)
   }, [problems, activities, intervals, profileMeta, leetcodeUsername, isLinked, 
-      dailyQuota, dailyPool, dailyDate, totalSolved, lastSync, 
+      dailyQuota, dailyPool, dailyDate, totalSolved, lastSync, isRollOverEnabled,
       ready, userId, activeUser])
 
-  const logActivity = useCallback((action, details, type = 'info') => {
-    const entry = { id: Date.now(), action, details, type, timestamp: new Date().toISOString() }
-    setActivities(prev => [entry, ...prev].slice(0, 10))
+  const logActivity = useCallback((action, details, type = 'info', timestamp = new Date().toISOString()) => {
+    const entry = { id: Date.now() + Math.random(), action, details, type, timestamp }
+    setActivities(prev => [entry, ...prev].slice(0, 200))
   }, [])
 
-  const addProblem = useCallback((title, titleSlug, solvedDate, difficulty) => {
+  const addProblem = useCallback((title, titleSlug, solvedDate, difficulty, topic = 'General') => {
     const p = makeProblem(title, titleSlug, solvedDate, difficulty, intervals)
+    p.topic = topic
     setProblems(prev => [...prev, p])
-    logActivity('Added Problem', `Started tracking "${title}"`, 'purple')
+    const isoDate = solvedDate instanceof Date ? solvedDate.toISOString() : solvedDate
+    logActivity('Added Problem', `Started tracking "${title}"`, 'purple', isoDate)
     return p
   }, [intervals, logActivity])
 
@@ -245,10 +274,13 @@ export function useAppState(activeUser, userId) {
     setProblems(prev => prev.map(p =>
       p.id === id ? advanceRevision(p, solvedDate, intervals) : p
     ))
+    // Immediately remove from the daily pool so the UI updates instantly
+    setDailyPool(prev => prev.filter(pId => pId !== id))
+    
     setActivities(prev => {
       const prob = problems.find(p => p.id === id)
-      const entry = { id: Date.now(), action: 'Revision Done', details: `Re-attempted "${prob?.title}"`, type: 'secondary', timestamp: new Date().toISOString() }
-      return [entry, ...prev].slice(0, 10)
+      const entry = { id: Date.now() + Math.random(), action: 'Revision Done', details: `Re-attempted "${prob?.title}"`, type: 'secondary', timestamp: solvedDate.toISOString() }
+      return [entry, ...prev].slice(0, 200)
     })
   }, [intervals, problems])
 
@@ -268,26 +300,80 @@ export function useAppState(activeUser, userId) {
     if (newId && onIdChange) onIdChange(newId)
   }, [activeUser])
 
-  const calculateDailyPlan = useCallback((forceTopUp = false) => {
+  const calculateDailyPlan = useCallback((forceTopUp = false, focusTopic = null, isManual = false) => {
     const todayStr = new Date().toDateString()
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    
+    // 💡 Synchronous check for "New Day" to avoid React state latency
+    const lastDate = LS.getRaw(`algonex_daily_date_${activeUser}`, '')
+    const isActuallyNewDay = lastDate !== todayStr
+    
+    // 1. Filtration — Remove problems no longer due
     let pool = dailyPool.filter(id => {
       const p = problems.find(pr => pr.id === id)
-      return p && new Date(p.nextRevisionAt) <= new Date()
+      if (!p) return false
+      const isDue = new Date(p.nextRevisionAt) <= new Date()
+      if (focusTopic) return p.topic === focusTopic && isDue
+      return isDue
     })
-    if (dailyDate !== todayStr || forceTopUp) {
-      let allDue = problems
-        .filter(p => new Date(p.nextRevisionAt) <= new Date() && !pool.includes(p.id))
-        .sort((a, b) => new Date(a.nextRevisionAt) - new Date(b.nextRevisionAt))
-      while (pool.length < dailyQuota && allDue.length > 0) {
-        pool.push(allDue.shift().id)
-      }
-      setDailyDate(todayStr)
-      LS.setRaw(`algonex_daily_date_${activeUser}`, todayStr)
+
+    // Safety Cleanup: Ensure roll-over cap or daily quota cap
+    const MAX_POOL_CAP = 2000 
+    if (!isRollOverEnabled || pool.length > MAX_POOL_CAP) {
+      pool = pool.slice(0, isRollOverEnabled ? MAX_POOL_CAP : dailyQuota)
     }
+
+    // 2. Refilling Logic — Smart Refill based on backlog vs today
+    if (isActuallyNewDay || forceTopUp || isManual) {
+      // Find ALL overdue problems not currently in pool
+      let allDue = problems
+        .filter(p => !pool.includes(p.id))
+        .filter(p => new Date(p.nextRevisionAt) <= new Date())
+      
+      if (focusTopic) allDue = allDue.filter(p => p.topic === focusTopic)
+
+      // Sort by solvedAt (Oldest First)
+      allDue.sort((a, b) => new Date(a.solvedAt) - new Date(b.solvedAt))
+
+      // Categorize: Backlog (missed before today) vs Fresh (due today)
+      // Note: We use onboardedAt to avoid counting historical imports as backlog
+      const joinDate = onboardedAt ? new Date(onboardedAt) : todayStart
+      const backlogItems = allDue.filter(p => new Date(p.nextRevisionAt) < todayStart && new Date(p.nextRevisionAt) >= joinDate)
+      const freshItems = allDue.filter(p => new Date(p.nextRevisionAt) >= todayStart || new Date(p.nextRevisionAt) < joinDate)
+
+      // 🔄 Refill Strategy: 
+      // 1. Always refill from BACKLOG (Sliding Window catch-up)
+      // 2. Only refill from FRESH if it's a NEW DAY or a MANUAL REQUEST
+      while (pool.length < dailyQuota) {
+        if (backlogItems.length > 0) {
+          pool.push(backlogItems.shift().id)
+        } else if ((isActuallyNewDay || isManual) && freshItems.length > 0) {
+          pool.push(freshItems.shift().id)
+        } else {
+          break; // Stop here if no backlog and already filled today's set
+        }
+      }
+
+      // If it's a New Day additive roll-over (and NOT a manual refill)
+      if (isActuallyNewDay && isRollOverEnabled && !forceTopUp && !isManual) {
+        // Just ensure we added our daily quota's worth of *new* items if possible
+        // (Handled by the while loop above)
+      }
+      
+      // Update the "Last Refilled" date
+      if (!focusTopic && (isActuallyNewDay || isManual)) {
+        setDailyDate(todayStr)
+        LS.setRaw(`algonex_daily_date_${activeUser}`, todayStr)
+      }
+    }
+
+    if (pool.length > MAX_POOL_CAP) pool = pool.slice(0, MAX_POOL_CAP)
+
     setDailyPool(pool)
     LS.set(`algonex_daily_pool_${activeUser}`, pool)
     return pool
-  }, [problems, dailyPool, dailyDate, dailyQuota, activeUser])
+  }, [problems, dailyPool, dailyQuota, isRollOverEnabled, onboardedAt, activeUser])
 
   const importProblems = useCallback((items) => {
     const now = new Date()
@@ -300,6 +386,7 @@ export function useAppState(activeUser, userId) {
           const offset = 1 + Math.floor(Math.random() * 14)
           const fakeDate = new Date(now.getTime() - offset * 86400000)
           next.push(makeProblem(sub.title, sub.titleSlug, fakeDate, sub.difficulty, intervals))
+          logActivity('Historical Solve', `Imported "${sub.title}"`, 'purple', fakeDate.toISOString())
           added++
         }
       })
@@ -326,6 +413,8 @@ export function useAppState(activeUser, userId) {
     solveRevision,
     deleteProblem,
     saveSettings,
+    isRollOverEnabled, setIsRollOverEnabled,
+    onboardedAt,
     calculateDailyPlan,
     importProblems,
   }

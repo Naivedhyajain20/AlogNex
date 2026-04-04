@@ -55,8 +55,9 @@ export default function Profile({ leetcodeId, algonexId, totalSolved, profileMet
             />
           ) : (
             <div style={{
-              width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.06)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto'
+              width: 90, height: 90, borderRadius: '50%', background: 'rgba(0,0,0,0.04)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto',
+              border: '1px solid var(--border)'
             }}>
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

@@ -1,5 +1,5 @@
 'use client'
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import ProblemCard from './ProblemCard'
 import { DifficultyChart, ProductivityChart } from './Charts'
 import HistoryImport from './HistoryImport'
@@ -24,10 +24,17 @@ function StatCard({ label, value, sub, iconColor, icon, valueStyle }) {
 
 export default function Dashboard({
   problems, activities, intervals, dailyPool,
-  dailyQuota, totalSolved, onSolve, onDelete, calculateDailyPlan, onImport,
+  dailyQuota, onboardedAt, totalSolved, onSolve, onDelete, calculateDailyPlan, onImport,
   isLinked, onStartLink
 }) {
+  const [viewTopic, setViewTopic] = useState('All')
   const now = useMemo(() => new Date(), [])
+
+  const uniqueTopics = useMemo(() => {
+    const ts = new Set()
+    problems.forEach(p => { if (p.topic) ts.add(p.topic) })
+    return Array.from(ts).sort()
+  }, [problems])
 
   const stats = useMemo(() => {
     const tomorrow = new Date(now)
@@ -42,11 +49,32 @@ export default function Dashboard({
   }, [problems, now])
 
   const todayProblems = useMemo(() =>
-    problems.filter(p => dailyPool.includes(p.id)),
-    [problems, dailyPool]
+    problems
+      .filter(p => dailyPool.includes(p.id))
+      .slice(0, dailyQuota), // 🏗️ SLIDING WINDOW: only show N at a time
+    [problems, dailyPool, dailyQuota]
   )
 
-  const completedToday = dailyQuota - todayProblems.length
+  const backlogCount = useMemo(() => {
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    
+    // Smart Total Backlog: Count ALL missed since join date
+    const joinDate = onboardedAt ? new Date(onboardedAt) : todayStart
+
+    return problems.filter(p => 
+      new Date(p.nextRevisionAt) < todayStart &&
+      new Date(p.nextRevisionAt) >= joinDate
+    ).length
+  }, [problems, onboardedAt])
+
+  const completedToday = useMemo(() => {
+    const today = new Date().toDateString()
+    return activities.filter(a => 
+      a.action === 'Revision Done' && 
+      new Date(a.timestamp).toDateString() === today
+    ).length
+  }, [activities])
 
   return (
     <div className="view">
@@ -157,22 +185,145 @@ export default function Dashboard({
       </div>
 
       {/* Today's Plan */}
-      <div className="card" style={{ borderColor: 'var(--primary)' }}>
-        <div className="card-header">
-          <h2>Today's Plan</h2>
-          <span className="tag" style={{ background: 'rgba(255,161,22,0.1)', color: 'var(--primary)' }}>
-            {completedToday}/{dailyQuota} Completed
-          </span>
+      <div className="card" style={{ 
+        borderColor: 'var(--primary)', 
+        boxShadow: '0 10px 25px -5px rgba(255,161,22,0.1), 0 8px 10px -6px rgba(255,161,22,0.1)' 
+      }}>
+        <div className="card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <h2 style={{ margin: 0 }}>Today's Plan</h2>
+              <span className="tag" 
+                title={backlogCount > 0 ? "Total missed revisions across all time" : "All caught up!"}
+                style={{ 
+                  border: 'none', 
+                  background: backlogCount > 0 ? 'rgba(255,161,22,0.1)' : 'rgba(0,0,0,0.05)', 
+                  color: backlogCount > 0 ? 'var(--primary)' : 'var(--text-muted)', 
+                  fontWeight: 'bold',
+                  display: 'flex', alignItems: 'center', gap: '4px'
+                }}>
+                {backlogCount > 0 ? `📦 Backlog: ${backlogCount}` : `✅ Backlog: 0`}
+              </span>
+              {viewTopic !== 'All' && (
+                <span className="tag" style={{ background: 'var(--primary)', color: 'white', border: 'none' }}>
+                  🎯 Focusing: {viewTopic}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {dailyPool.length > dailyQuota && (
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>
+                  Next up: {dailyPool.length - todayProblems.length} more
+                </span>
+              )}
+              <span className="tag" style={{ background: 'rgba(255,161,22,0.1)', color: 'var(--primary)' }}>
+                {completedToday}/{dailyQuota} Completed Today
+              </span>
+            </div>
+          </div>
+
+          {/* Topic Focus Selector */}
+          <div className="topic-focus-bar" style={{ 
+            display: 'flex', gap: '0.5rem', flexWrap: 'wrap', 
+            paddingTop: '0.25rem', paddingBottom: '0.25rem',
+            width: '100%', alignItems: 'center'
+          }}>
+            <div style={{ position: 'relative', flex: '0 0 auto', marginRight: '0.5rem' }}>
+              <svg style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} 
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input 
+                type="text"
+                className="form-control"
+                placeholder="Type topic to focus..."
+                value={viewTopic === 'All' ? '' : viewTopic}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (!val) setViewTopic('All')
+                  else setViewTopic(val)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') calculateDailyPlan(true, viewTopic === 'All' ? null : viewTopic)
+                }}
+                onBlur={() => calculateDailyPlan(true, viewTopic === 'All' ? null : viewTopic)}
+                style={{ 
+                  paddingLeft: '32px', paddingRight: viewTopic !== 'All' ? '30px' : '10px',
+                  borderRadius: '8px', height: '32px', 
+                  fontSize: '0.8rem', width: '220px', background: 'rgba(0,0,0,0.02)',
+                  border: '1px solid var(--border)', transition: 'all 0.2s'
+                }}
+              />
+              {viewTopic !== 'All' && (
+                <button 
+                  onClick={() => { setViewTopic('All'); calculateDailyPlan(true, null) }}
+                  style={{ 
+                    position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px'
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            <button 
+              className={`btn btn-xs ${viewTopic === 'All' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => { setViewTopic('All'); calculateDailyPlan(true, null) }}
+              style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem', height: '32px', borderRadius: '8px' }}
+            >
+              All Topics
+            </button>
+            
+            <div style={{ display: 'flex', gap: '0.4rem', borderLeft: '1px solid var(--border)', paddingLeft: '0.75rem', overflowX: 'auto', paddingBottom: '2px' }}>
+              {uniqueTopics.map(topic => (
+                <button 
+                  key={topic}
+                  className={`btn btn-xs ${viewTopic === topic ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => { setViewTopic(topic); calculateDailyPlan(true, topic) }}
+                  style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem', height: '28px', whiteSpace: 'nowrap', borderRadius: '6px' }}
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+
         {todayProblems.length === 0 ? (
-          <div className="empty-state">
-            <p>🎉 All caught up for today! Set a higher quota or wait until tomorrow.</p>
+          <div className="empty-state" style={{ padding: '3rem 1rem' }}>
+            <p style={{ fontSize: '1.2rem', fontWeight: '500' }}>🎉 {viewTopic === 'All' ? "You're all caught up for now!" : `No more ${viewTopic} revisions right now.`}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              {viewTopic !== 'All' ? 'Switch back to "All Topics" to see other due problems.' : 'You have completed your daily set. Take a break or keep going below!'}
+            </p>
+            
+            {/* Manual Top-up Button */}
+            {viewTopic === 'All' && problems.some(p => new Date(p.nextRevisionAt) <= new Date() && !dailyPool.includes(p.id)) && (
+              <button 
+                onClick={() => calculateDailyPlan(true, null, true)}
+                className="btn btn-primary"
+                style={{ 
+                  padding: '0.75rem 1.5rem', 
+                  borderRadius: '12px', 
+                  fontSize: '0.9rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 15px rgba(255,161,22,0.2)'
+                }}
+              >
+                <span>🔥 Feeling productive? Get 5 more</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="problem-list">
             {todayProblems.map(p => (
               <ProblemCard
-                key={p.id} problem={p} intervals={intervals}
+                key={p.id} problem={p} onboardedAt={onboardedAt} intervals={intervals}
                 onSolve={onSolve} onDelete={onDelete}
               />
             ))}

@@ -202,14 +202,15 @@ export default function App() {
     ready, problems, setProblems, activities,
     intervals, setIntervals,
     dailyQuota, setDailyQuota,
+    isRollOverEnabled, setIsRollOverEnabled,
     dailyPool, calculateDailyPlan,
     totalSolved, setTotalSolved,
     profileMeta, setProfileMeta,
     lastSync, setLastSync,
     leetcodeUsername, setLeetcodeUsername,
-    isLinked, setIsLinked,
+    isLinked, setIsLinked, onboardedAt,
     addProblem, solveRevision, deleteProblem,
-    importProblems,
+    importProblems, logActivity,
   } = useAppState(username, userId)
 
   // Trigger splash when authed changes to true
@@ -222,13 +223,66 @@ export default function App() {
   // ── View routing ──
   const [view, setView] = useState('dashboard')
 
-  // recalculate daily plan whenever problems change or view switches to dashboard
+  // recalculate daily plan once on load/auth
   useEffect(() => {
     if (ready && authed) calculateDailyPlan()
-  }, [ready, authed, problems.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, authed]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync ──
   const [syncing, setSyncing] = useState(false)
+  const [refinedOnce, setRefinedOnce] = useState(false)
+
+  // 🧠 Smart Topic Detection Engine
+  const getTopicFromTitle = (title) => {
+    const t = title.toLowerCase()
+
+    // 🏆 Specific Multi-word topics (High Priority)
+    if (t.includes('binary search tree')) return 'Binary Search Tree'
+    if (t.includes('binary tree')) return 'Binary Tree'
+    if (t.includes('linked list')) return 'Linked List'
+    if (t.includes('doubly-linked list')) return 'Doubly-Linked List'
+    if (t.includes('binary search')) return 'Binary Search'
+    if (t.includes('sliding window')) return 'Sliding Window'
+    if (t.includes('two pointer')) return 'Two Pointers'
+    if (t.includes('prefix sum')) return 'Prefix Sum'
+    if (t.includes('union-find') || t.includes('disjoint set')) return 'Union-Find'
+    if (t.includes('breadth-first') || t.includes('bfs')) return 'Breadth-First Search'
+    if (t.includes('depth-first') || t.includes('dfs')) return 'Depth-First Search'
+    if (t.includes('monotonic stack')) return 'Monotonic Stack'
+    if (t.includes('monotonic queue')) return 'Monotonic Queue'
+    if (t.includes('topological sort')) return 'Topological Sort'
+    if (t.includes('dynamic programming') || t.includes('dp')) return 'Dynamic Programming'
+    if (t.includes('heap') || t.includes('priority queue')) return 'Heap (Priority Queue)'
+    if (t.includes('bit manipulation') || t.includes('bitmask')) return 'Bit Manipulation'
+    if (t.includes('shortest path')) return 'Shortest Path'
+    if (t.includes('segment tree')) return 'Segment Tree'
+    if (t.includes('trie')) return 'Trie'
+    
+    // 🟦 Core Categories
+    if (t.includes('array') || t.includes('elements') || t.includes('element') || t.includes('majority')) return 'Array'
+    if (t.includes('string')) return 'String'
+    if (t.includes('math') || t.includes('number') || t.includes('prime') || t.includes('integer')) return 'Math'
+    if (t.includes('hash table') || t.includes('hash map') || t.includes('hash')) return 'Hash Table'
+    if (t.includes('sort') || t.includes('sorting')) return 'Sorting'
+    if (t.includes('greedy')) return 'Greedy'
+    if (t.includes('matrix')) return 'Matrix'
+    if (t.includes('tree') || t.includes('node') || t.includes('traversal')) return 'Tree'
+    if (t.includes('graph')) return 'Graph Theory'
+    if (t.includes('recursion') || t.includes('recursive')) return 'Recursion'
+    if (t.includes('backtrack')) return 'Backtracking'
+    if (t.includes('stack')) return 'Stack'
+    if (t.includes('queue')) return 'Queue'
+    if (t.includes('database') || t.includes('sql')) return 'Database'
+    if (t.includes('design')) return 'Design'
+    if (t.includes('geometry')) return 'Geometry'
+    if (t.includes('concurrency')) return 'Concurrency'
+    if (t.includes('simulation')) return 'Simulation'
+    
+    // 🟨 JavaScript Specific
+    if (t.includes('function') || t.includes('counter') || t.includes('closure') || t.includes('prototype')) return 'Javascript'
+
+    return 'General'
+  }
 
   const handleSync = useCallback(async () => {
     if (!isLinked || !leetcodeUsername) {
@@ -263,9 +317,15 @@ export default function App() {
             const subDate = new Date(parseInt(sub.timestamp) * 1000)
             const existingIdx = updated.findIndex(p => p.titleSlug === sub.titleSlug)
 
+            // Enhanced topic detection from title
+            const detectedTopic = getTopicFromTitle(sub.title)
+
             if (existingIdx === -1) {
               // New problem — add it
-              updated.push(makeProblem(sub.title, sub.titleSlug, subDate, 'medium', intervals))
+              const p = makeProblem(sub.title, sub.titleSlug, subDate, 'medium', intervals)
+              p.topic = detectedTopic
+              updated.push(p)
+              logActivity('Historical Solve', `Synced "${sub.title}"`, 'purple', subDate.toISOString())
               added++
             } else {
               // Existing problem — check if this is a new revision
@@ -273,6 +333,7 @@ export default function App() {
               const lastMs = new Date(existing.solvedAt).getTime()
               if (subDate.getTime() > lastMs + 3600000) {
                 updated[existingIdx] = advanceRevision(existing, subDate, intervals)
+                logActivity('Historical Solve', `Synced revision for "${sub.title}"`, 'secondary', subDate.toISOString())
                 revised++
               }
             }
@@ -298,8 +359,8 @@ export default function App() {
   }, [leetcodeUsername, isLinked, intervals, setProblems, setTotalSolved, setProfileMeta,
       setLastSync, calculateDailyPlan, addToast])
 
-  const handleAddProblem = useCallback((title, slug, date, difficulty) => {
-    addProblem(title, slug, date, difficulty)
+  const handleAddProblem = useCallback((title, slug, date, difficulty, topic) => {
+    addProblem(title, slug, date, difficulty, topic)
     addToast(`Added "${title}" to tracker.`, 'success')
   }, [addProblem, addToast])
 
@@ -330,6 +391,30 @@ export default function App() {
   const handleSaveQuota = useCallback((q) => {
     setDailyQuota(q)
   }, [setDailyQuota])
+
+  // 🔄 Automatic Topic Refinement (Backfill)
+  useEffect(() => {
+    if (!ready || problems.length === 0) return
+    
+    const refined = problems.map(p => {
+      if (p.topic === 'General' || !p.topic) {
+        const newTopic = getTopicFromTitle(p.title)
+        if (newTopic !== 'General') {
+          return { ...p, topic: newTopic }
+        }
+      }
+      return p
+    })
+
+    // Only update if something actually changed
+    const hasChanges = refined.some((p, i) => p.topic !== problems[i].topic)
+
+    if (hasChanges) {
+      setProblems(refined)
+      const changedCount = refined.filter((p, i) => p.topic !== problems[i].topic).length
+      addToast(`Optimized ${changedCount} question tags!`, 'info')
+    }
+  }, [ready, problems, getTopicFromTitle]) // getTopicFromTitle is stable as it's defined in component body
 
   const handleUpdateProfile = useCallback(async (newAlgonexId, newLeetcodeId) => {
     if (!supabase) { addToast('Supabase Client not initialized.', 'error'); return }
@@ -455,6 +540,7 @@ export default function App() {
             intervals={intervals}
             dailyPool={dailyPool}
             dailyQuota={dailyQuota}
+            onboardedAt={onboardedAt}
             totalSolved={totalSolved}
             onSolve={handleSolveRevision}
             onDelete={handleDeleteProblem}
@@ -490,8 +576,10 @@ export default function App() {
             username={leetcodeUsername}
             intervals={intervals}
             dailyQuota={dailyQuota}
+            isRollOverEnabled={isRollOverEnabled}
             onSaveIntervals={handleSaveIntervals}
             onSaveQuota={handleSaveQuota}
+            onSaveRollOver={setIsRollOverEnabled}
             onChangeId={(newId) => setLeetcodeUsername(newId)}
             onImport={handleImport}
           />

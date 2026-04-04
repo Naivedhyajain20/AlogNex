@@ -38,6 +38,9 @@ export function DifficultyChart({ problems }) {
       else m++
     })
 
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const labelColor = isDark ? '#9ca3af' : '#64748b'
+
     chartRef.current = new ChartJS(ref.current, {
       type: 'doughnut',
       data: {
@@ -56,7 +59,7 @@ export function DifficultyChart({ problems }) {
         plugins: {
           legend: {
             position: 'bottom',
-            labels: { color: '#9ca3af', usePointStyle: true, padding: 20 },
+            labels: { color: labelColor, usePointStyle: true, padding: 20 },
           },
         },
       },
@@ -90,14 +93,19 @@ export function ProductivityChart({ problems, activities }) {
       let count = 0
       activities.forEach(a => {
         const t = new Date(a.timestamp).getTime()
-        if (t >= start && t <= end) count++
-      })
-      problems.forEach(p => {
-        const t = new Date(p.solvedAt).getTime()
-        if (t >= start && t <= end) count++
+        if (t >= start && t <= end) {
+          // Only count solve-related activities to avoid double counting and noise
+          if (['Problem Solved', 'Revision Done', 'Added Problem', 'Historical Solve'].includes(a.action)) {
+            count++
+          }
+        }
       })
       data.push(count)
     }
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    const labelColor = isDark ? '#9ca3af' : '#64748b'
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
 
     chartRef.current = new ChartJS(ref.current, {
       type: 'line',
@@ -107,12 +115,12 @@ export function ProductivityChart({ problems, activities }) {
           label: 'Activity',
           data,
           borderColor: '#6366f1',
-          backgroundColor: 'rgba(99,102,241,0.1)',
+          backgroundColor: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)',
           borderWidth: 3,
           fill: true,
           tension: 0.4,
           pointBackgroundColor: '#6366f1',
-          pointBorderColor: '#fff',
+          pointBorderColor: isDark ? '#111' : '#fff',
           pointHoverRadius: 6,
         }],
       },
@@ -121,8 +129,12 @@ export function ProductivityChart({ problems, activities }) {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { color: '#9ca3af' }, grid: { display: false } },
-          y: { ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+          x: { ticks: { color: labelColor }, grid: { display: false } },
+          y: { 
+            ticks: { color: labelColor, stepSize: 1 }, 
+            grid: { color: gridColor }, 
+            beginAtZero: true 
+          },
         },
       },
     })

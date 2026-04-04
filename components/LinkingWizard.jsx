@@ -105,7 +105,7 @@ export default function LinkingWizard({ onLink }) {
               <div className="choice-card recommended" onClick={() => setStep('express')}>
                 <div className="badge">FASTEST</div>
                 <div className="icon">🔐</div>
-                <h3><span className="algo-white">One-Click</span> <span className="nex-orange">Sync</span></h3>
+                <h3><span className="algo-brand">One-Click</span> <span className="nex-orange">Sync</span></h3>
                 <p>Instantly establish a secure, encrypted bridge to your LeetCode profile with zero hassle.</p>
                 <button className="btn btn-primary-outline">Launch Sync</button>
               </div>
@@ -222,7 +222,7 @@ export default function LinkingWizard({ onLink }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--bg-dark);
+          background: var(--bg);
           padding: 2rem;
         }
         .wizard-container {
@@ -230,6 +230,10 @@ export default function LinkingWizard({ onLink }) {
           width: 100%;
           padding: 3rem;
           text-align: center;
+          background: var(--bg-card);
+          border: 1px solid var(--border);
+          border-radius: 24px;
+          box-shadow: var(--shadow-lg);
         }
         .wizard-choice h1 {
           font-size: 2.5rem;
@@ -245,17 +249,18 @@ export default function LinkingWizard({ onLink }) {
           margin-top: 3rem;
         }
         .choice-card {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: var(--bg-card);
+          border: 1px solid var(--border);
           padding: 2rem;
           border-radius: 20px;
           cursor: pointer;
           transition: all 0.3s ease;
           position: relative;
+          box-shadow: var(--shadow-sm);
         }
         .choice-card:hover {
           transform: translateY(-10px);
-          background: rgba(255, 255, 255, 0.05);
+          box-shadow: var(--shadow-md);
           border-color: var(--primary);
         }
         .choice-card.recommended {

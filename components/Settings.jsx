@@ -4,22 +4,19 @@ import HistoryImport from './HistoryImport'
 import { showToast } from './Toast'
 
 export default function Settings({
-  username, intervals, dailyQuota,
-  onSaveIntervals, onSaveQuota, onChangeId, onImport
+  username, intervals, dailyQuota, isRollOverEnabled,
+  onSaveIntervals, onSaveQuota, onSaveRollOver, onChangeId, onImport
 }) {
-  const [intervalsText, setIntervalsText] = useState(intervals.join(', '))
+  const [intervalsText, setIntervalsText] = useState(intervals[0] || 1)
   const [quotaVal, setQuotaVal] = useState(dailyQuota)
   const [newId, setNewId] = useState('')
 
   const handleIntervals = (e) => {
     e.preventDefault()
-    const parsed = intervalsText.split(',')
-      .map(n => parseInt(n.trim()))
-      .filter(n => !isNaN(n) && n > 0)
-      .sort((a, b) => a - b)
-    if (parsed.length < 2) { showToast('Enter at least 2 intervals.', 'warning'); return }
-    onSaveIntervals(parsed)
-    showToast('Intervals updated!', 'success')
+    const val = parseInt(intervalsText)
+    if (isNaN(val) || val < 1) { showToast('Please enter a valid number of days.', 'warning'); return }
+    onSaveIntervals([val])
+    showToast('Revision frequency updated!', 'success')
   }
 
   const handleQuota = (e) => {
@@ -45,46 +42,49 @@ export default function Settings({
         <p>Customize your revision schedule and account details.</p>
       </div>
 
-      {/* Spaced Repetition Intervals */}
+      {/* Revision Frequency */}
       <div className="card">
         <div className="card-header">
-          <h2>Spaced Repetition Intervals</h2>
+          <h2>Revision Frequency</h2>
         </div>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-          Comma-separated days between revisions (e.g. 1, 3, 7, 14, 30, 90, 180).
-          Problems advance through these intervals each time you mark them solved.
+          Choose how often you want to revise each problem. For example, enter <strong>1</strong> for daily, <strong>2</strong> for every two days, and so on.
         </p>
         <form onSubmit={handleIntervals} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-            <input
-              className="form-control"
-              value={intervalsText}
-              onChange={e => setIntervalsText(e.target.value)}
-              placeholder="1, 3, 7, 14, 30, 90, 180"
-            />
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <input
+                type="number" min="1" max="365"
+                className="form-control"
+                style={{ width: 100 }}
+                value={intervalsText}
+                onChange={e => setIntervalsText(e.target.value)}
+              />
+              <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>Days</span>
+            </div>
           </div>
-          <button type="submit" className="btn btn-primary">Save</button>
+          <button type="submit" className="btn btn-primary">Save Changes</button>
         </form>
-        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {intervals.map((d, i) => (
-            <span key={i} className="tag"
-              style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
-              {d}d
-            </span>
-          ))}
+        <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setIntervalsText(1); onSaveIntervals([1]) }}>Daily</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setIntervalsText(2); onSaveIntervals([2]) }}>Every 2 Days</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setIntervalsText(7); onSaveIntervals([7]) }}>Weekly</button>
         </div>
       </div>
 
-      {/* Daily Quota */}
+      {/* Daily Quota & Roll-over */}
       <div className="card">
         <div className="card-header">
           <h2>Daily Revision Quota</h2>
         </div>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-          How many problems to include in each day's plan. Unsolved problems carry over.
+          How many problems to include each day. 
+          {isRollOverEnabled ? ' Unfinished problems will roll-over to the next day.' : ' Unfinished problems are replaced each morning.'}
         </p>
-        <form onSubmit={handleQuota} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+        
+        <form onSubmit={handleQuota} style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Daily Limit</label>
             <input
               type="number" min="1" max="50"
               className="form-control" style={{ width: 120 }}
@@ -92,16 +92,40 @@ export default function Settings({
               onChange={e => setQuotaVal(e.target.value)}
             />
           </div>
-          <button type="submit" className="btn btn-primary">Set Quota</button>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {[3,5,10,15,20].map(n => (
-              <button key={n} type="button" className="btn btn-ghost btn-sm"
-                onClick={() => setQuotaVal(n)}>
-                {n}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+            <button type="submit" className="btn btn-primary">Set Quota</button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {[3,5,10,15,20].map(n => (
+                <button key={n} type="button" className="btn btn-ghost btn-sm"
+                  onClick={() => setQuotaVal(n)}>
+                  {n}
+                </button>
+              ))}
+            </div>
           </div>
         </form>
+
+        <div style={{ 
+          borderTop: '1px solid var(--border)', 
+          paddingTop: '1.5rem',
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
+          <div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.25rem' }}>Roll-over Unfinished Tasks</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              Stack previous unfinished revisions onto today's quota.
+            </p>
+          </div>
+          <button 
+            className={`btn ${isRollOverEnabled ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => onSaveRollOver(!isRollOverEnabled)}
+            style={{ minWidth: 100 }}
+          >
+            {isRollOverEnabled ? 'Enabled' : 'Disabled'}
+          </button>
+        </div>
       </div>
 
       {/* LeetCode ID */}

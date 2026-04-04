@@ -19,7 +19,10 @@ export default function RevisionTracker({ problems, intervals, onSolve, onDelete
         if (['easy','medium','hard'].includes(filter)) return p.difficulty === filter
         return true
       })
-      .sort((a, b) => new Date(a.nextRevisionAt) - new Date(b.nextRevisionAt))
+      .sort((a, b) => {
+        // THE STACK LOGIC: Oldest Solved at the top of this list (bottom of the logical stack)
+        return new Date(a.solvedAt) - new Date(b.solvedAt)
+      })
   }, [problems, filter, search, now])
 
   const handleAdd = (e) => {
@@ -31,10 +34,8 @@ export default function RevisionTracker({ problems, intervals, onSolve, onDelete
     const intervalDays = parseInt(fd.get('interval'))
     if (!title) return
     // extract slug from URL or use title-slug
-    const slug = url.includes('/problems/')
-      ? url.split('/problems/')[1].replace(/\/$/, '')
-      : title.toLowerCase().replace(/\s+/g, '-')
-    onAdd(title, slug, new Date(), difficulty, intervalDays)
+    const topic = fd.get('topic').trim() || 'General'
+    onAdd(title, slug, new Date(), difficulty, topic)
     e.target.reset()
     setShowAdd(false)
   }
@@ -108,6 +109,10 @@ export default function RevisionTracker({ problems, intervals, onSolve, onDelete
               <label>LeetCode URL</label>
               <input name="url" className="form-control" placeholder="https://leetcode.com/problems/two-sum/" />
             </div>
+            <div className="form-group" style={{ gridColumn: '1/-1' }}>
+              <label>Topic / Category</label>
+              <input name="topic" className="form-control" placeholder="Arrays, DP, Recursion..." />
+            </div>
             <div className="form-group">
               <label>Difficulty</label>
               <select name="difficulty" className="form-control">
@@ -116,14 +121,7 @@ export default function RevisionTracker({ problems, intervals, onSolve, onDelete
                 <option value="hard">Hard</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>First Revision (days)</label>
-              <select name="interval" className="form-control">
-                {(intervals || [1,3,7,14,30]).map(d => (
-                  <option key={d} value={d}>{d} days</option>
-                ))}
-              </select>
-            </div>
+
             <div style={{ gridColumn: '1/-1', display: 'flex', gap: '0.75rem' }}>
               <button type="submit" className="btn btn-primary">Add to Tracker</button>
             </div>

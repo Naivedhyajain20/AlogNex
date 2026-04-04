@@ -70,11 +70,11 @@ export default function HistoryImport({ onImport }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {/* Step 1 */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+        <div style={{ background: 'rgba(0,0,0,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
             <div style={{ background: 'var(--primary)', color: 'var(--bg-dark)', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', flexShrink: 0 }}>1</div>
             <div>
-              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: '700' }}>Save the Exporter</h3>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Save the Exporter</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
                 Drag this orange button to your browser's Bookmarks Bar:
               </p>
@@ -95,11 +95,11 @@ export default function HistoryImport({ onImport }) {
         </div>
 
         {/* Step 2 */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+        <div style={{ background: 'rgba(0,0,0,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
             <div style={{ background: 'var(--primary)', color: 'var(--bg-dark)', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', flexShrink: 0 }}>2</div>
             <div>
-              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: '700' }}>Run it on LeetCode</h3>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Run it on LeetCode</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.5' }}>
                 Log in to <a href="https://leetcode.com" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>leetcode.com</a> and click the bookmark you just saved. 
                 It will securely download a file named <code>algonex-export.json</code> containing your true history.
@@ -111,7 +111,7 @@ export default function HistoryImport({ onImport }) {
         {/* Step 3 */}
         <div 
           style={{ 
-            background: dragOver ? 'rgba(255, 161, 22, 0.05)' : 'rgba(255,255,255,0.03)', 
+            background: dragOver ? 'rgba(255, 161, 22, 0.05)' : 'rgba(0,0,0,0.02)', 
             padding: '1.5rem', 
             borderRadius: '12px', 
             border: dragOver ? '1px dashed var(--primary)' : '1px solid var(--border)',
@@ -124,7 +124,7 @@ export default function HistoryImport({ onImport }) {
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
             <div style={{ background: 'var(--primary)', color: 'var(--bg-dark)', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', flexShrink: 0 }}>3</div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: '700' }}>Import it here</h3>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', fontWeight: '700', color: 'var(--text-primary)' }}>Import it here</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: '1.5' }}>
                 Upload that <code>algonex-export.json</code> here, and we will automatically schedule all your past problems for revision securely!
               </p>

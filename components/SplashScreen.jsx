@@ -25,7 +25,7 @@ export default function SplashScreen({ onFinish }) {
     <div className={`splash-overlay ${fade}`}>
       <div className="splash-content">
         <img src="/logo.png" alt="ALGONEX Logo" className="splash-logo" />
-        <h1 className="splash-text">ALGON<span style={{ color: '#ffa116' }}>EX</span></h1>
+        <h1 className="splash-text"><span className="algo-brand">ALGO</span><span className="nex-orange">NEX</span></h1>
       </div>
       <style jsx>{`
         .splash-overlay {
@@ -34,7 +34,7 @@ export default function SplashScreen({ onFinish }) {
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: #000;
+          background: var(--bg);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -58,14 +58,14 @@ export default function SplashScreen({ onFinish }) {
           width: 150px;
           height: 150px;
           object-fit: contain;
-          filter: drop-shadow(0 0 20px rgba(255, 161, 22, 0.3));
+          filter: drop-shadow(0 0 20px var(--primary-glow));
         }
         .splash-text {
           font-family: var(--font-logo), sans-serif;
           font-size: 3rem;
           font-weight: 800;
           letter-spacing: -0.02em;
-          color: #ffffff;
+          color: var(--text-primary);
         }
         @keyframes scale-up {
           0% { transform: scale(0.8); opacity: 0; }

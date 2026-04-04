@@ -38,7 +38,7 @@ export default function Sidebar({
       <div className="sidebar-header">
         <div className="logo" style={{ fontFamily: 'var(--font-logo)', fontWeight: 800, letterSpacing: '-0.02em', fontSize: '1.4rem' }}>
           <img src="/logo.png" alt="ALGONEX" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-          <span><span className="algo-white">ALGO</span><span className="nex-orange">NEX</span></span>
+          <span><span className="algo-brand">ALGO</span><span className="nex-orange">NEX</span></span>
         </div>
       </div>
 

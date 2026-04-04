@@ -32,7 +32,7 @@ export default function Login({ onLogin, hasAccount, username: savedUser }) {
           <div className="logo-section">
             <img src="/logo.png" alt="ALGONEX Logo" width="60" height="60" className="brand-logo shadow-glow" />
             <h1 className="brand-name">
-              <span className="algo-white">ALGO</span><span className="nex-orange">NEX</span>
+              <span className="algo-brand">ALGO</span><span className="nex-orange">NEX</span>
             </h1>
           </div>
           <p className="subtitle" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>MASTER YOUR LEETCODE JOURNEY</p>
